@@ -68,6 +68,12 @@ from ee_pcb_toolkit.signal_integrity import (
     quarter_wavelength_mm,
     lumped_length_limit_mm,
 )
+from ee_pcb_toolkit.pcb_rules import (
+    recommend_trace_width_mil,
+    voltage_clearance_recommendation_mil,
+    via_rule_summary,
+    get_diff_pair_rule,
+)
 from ee_pcb_toolkit.input_helpers import (
     get_engineering_value,
     LENGTH_TO_MM,
@@ -584,6 +590,101 @@ def signal_integrity_calculator() -> None:
     else:
         print("Invalid signal integrity calculator selection.")
 
+
+def pcb_rules_calculator() -> None:
+    print("\nPCB Rule Assistant")
+    print("------------------")
+    print("1. Recommend trace width from current and net class")
+    print("2. Recommend starter clearance from voltage")
+    print("3. Show via rule summary")
+    print("4. Show differential-pair rule")
+    print("0. Back to main menu")
+
+    choice = input("\nSelect a PCB rule calculator: ").strip()
+
+    if choice == "1":
+        print("\nNet class options:")
+        print("default, power, power_input, ntc, heater")
+
+        net_class = input("Net class [example: power_input]: ").strip()
+        current = get_engineering_value("Current [example: 2 A]: ", CURRENT_TO_AMPS, "a")
+        copper_oz = get_engineering_value("Copper weight [example: 1 oz or 2 oz]: ", COPPER_WEIGHT_TO_OZ, "oz")
+        temp_rise = get_float("Allowed temperature rise C [example: 10]: ")
+        layer = input("Layer type [external/internal]: ").strip()
+
+        recommendation = recommend_trace_width_mil(
+            current_a=current,
+            net_class=net_class,
+            copper_oz=copper_oz,
+            temperature_rise_c=temp_rise,
+            layer=layer,
+        )
+
+        print("\nTrace-width recommendation:")
+        print(f"Rule: {recommendation['rule_name']}")
+        print(f"Required by current: {recommendation['required_by_current_mil']:.4f} mil")
+        print(f"Rule min: {recommendation['rule_min_mil']:.4f} mil")
+        print(f"Rule preferred: {recommendation['rule_preferred_mil']:.4f} mil")
+        print(f"Rule max: {recommendation['rule_max_mil']:.4f} mil")
+        print(f"Recommended min: {recommendation['recommended_min_mil']:.4f} mil")
+        print(f"Recommended preferred: {recommendation['recommended_preferred_mil']:.4f} mil")
+        print(f"Status: {recommendation['status']}")
+
+    elif choice == "2":
+        print("\nClearance type options:")
+        print("default, digital, plane, board_outline, switching")
+
+        voltage = get_engineering_value("Voltage [example: 24 V]: ", VOLTAGE_TO_VOLTS, "v")
+        clearance_type = input("Clearance type [example: default]: ").strip()
+
+        trace_width_mil = None
+
+        if clearance_type.strip().lower() == "switching":
+            trace_width_mil = get_float("Trace width in mil [example: 6]: ")
+
+        result = voltage_clearance_recommendation_mil(
+            voltage_v=voltage,
+            clearance_type=clearance_type,
+            trace_width_mil=trace_width_mil,
+        )
+
+        print(f"\nRecommended clearance: {result['recommended_clearance_mil']:.4f} mil")
+        print(result["note"])
+
+    elif choice == "3":
+        print("\nVia rule options:")
+        print("default, power, legacy_default, legacy_power")
+
+        rule_name = input("Via rule [example: default]: ").strip()
+        summary = via_rule_summary(rule_name)
+
+        print("\nVia rule summary:")
+        print(f"Rule: {summary['rule_name']}")
+        print(f"Pad diameter: {summary['pad_diameter_mil']:.4f} mil")
+        print(f"Drill diameter: {summary['drill_diameter_mil']:.4f} mil")
+        print(f"Annular ring: {summary['annular_ring_mil']:.4f} mil")
+        print(f"Meets annular ring rule: {summary['meets_annular_ring']}")
+
+    elif choice == "4":
+        print("\nDiff-pair rule options:")
+        print("diff100_legacy, diff100, diff120")
+
+        rule_name = input("Diff-pair rule [example: diff100_legacy]: ").strip()
+        rule = get_diff_pair_rule(rule_name)
+
+        print("\nDifferential-pair rule:")
+        print(f"Rule: {rule['name']}")
+        print(f"Target impedance: {rule['target_impedance_ohms']:.1f} ohms")
+        print(f"Width: {rule['width_mil']:.4f} mil")
+        print(f"Gap: {rule['gap_mil']:.4f} mil")
+        print(rule["description"])
+
+    elif choice == "0":
+        return
+
+    else:
+        print("Invalid PCB rule calculator selection.")
+
 def print_menu() -> None:
     print("\nPractical EE & PCB Toolkit")
     print("--------------------------")
@@ -597,6 +698,7 @@ def print_menu() -> None:
     print("8. Filter calculations")
     print("9. Connector calculations")
     print("10. Signal integrity calculations")
+    print("11. PCB rule assistant")
     print("0. Exit")
 
 
@@ -625,6 +727,8 @@ def main() -> None:
             connector_calculator()
         elif choice == "10":
             signal_integrity_calculator()
+        elif choice == "11":
+            pcb_rules_calculator()
         elif choice == "0":
             print("Exiting Practical EE & PCB Toolkit.")
             break
@@ -634,3 +738,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
