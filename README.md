@@ -2,7 +2,7 @@
 
 A practical Python toolkit for electrical engineering and PCB design calculations.
 
-This project collects common calculations used during schematic design, PCB layout, power budgeting, component sizing, and hardware bring-up. The goal is to turn repeated engineering calculations into small, reusable, tested Python tools.
+This project collects common calculations used during schematic design, PCB layout, power budgeting, component sizing, analog front-end design, sensor scaling, and hardware bring-up. The goal is to turn repeated engineering calculations into small, reusable, tested Python tools.
 
 ## Quick Start
 
@@ -22,10 +22,32 @@ Practical EE & PCB Toolkit
 3. PCB trace voltage drop
 4. LDO power dissipation
 5. Via planning for power net
+6. ADC calculations
+7. Op-amp calculations
 0. Exit
 ```
 
 Select a calculator, enter the values it asks for, and the toolkit prints the result.
+
+## Engineering-Friendly Input
+
+The interactive calculator accepts practical EE/PCB units directly.
+
+Examples:
+
+```text
+22 mil
+0.45 mm
+4.7k
+10k
+100 nF
+10 uF
+500 mA
+2 A
+1 MHz
+```
+
+This means you do not have to manually convert every value to base SI units before using the tool.
 
 ## Example: Using the Interactive Calculator
 
@@ -34,23 +56,17 @@ For a voltage divider, choose option `1`:
 ```text
 Voltage Divider Calculator
 --------------------------
-Input voltage Vin [V]: 5
-Top resistor R1 [ohms]: 10000
-Bottom resistor R2 [ohms]: 10000
+Input voltage Vin [example: 5 V]: 5 V
+Top resistor R1 [example: 10k]: 10k
+Bottom resistor R2 [example: 4.7k]: 4.7k
 
-Output voltage: 2.5000 V
+Output voltage: 1.5986 V
 ```
 
 This answers the practical question:
 
 ```text
-If I use a 10k / 10k voltage divider from 5 V, what output voltage do I get?
-```
-
-Answer:
-
-```text
-2.5 V
+If I use a 10k / 4.7k voltage divider from 5 V, what output voltage do I get?
 ```
 
 ## Why This Project Exists
@@ -63,6 +79,8 @@ During electrical engineering and PCB design work, the same calculations show up
 - How much power will this LDO dissipate?
 - What is the cutoff frequency of this RC filter?
 - What output voltage will this resistor divider create?
+- What ADC code should I expect for this voltage?
+- What op-amp gain do these resistors create?
 
 This project turns those repeated calculations into reusable tools.
 
@@ -85,6 +103,8 @@ The command-line interface currently supports:
 - PCB trace resistance, voltage drop, and power loss
 - LDO power dissipation
 - via planning for PCB power nets
+- ADC voltage/code calculations and sensor divider planning
+- op-amp gain, output, bandwidth, and slew-rate calculations
 
 Run the interactive calculator with:
 
@@ -92,7 +112,7 @@ Run the interactive calculator with:
 python -m ee_pcb_toolkit
 ```
 
-### Unit Conversions
+### Unit and Input Conversions
 
 - mils to millimeters
 - millimeters to mils
@@ -100,6 +120,7 @@ python -m ee_pcb_toolkit
 - millimeters to inches
 - copper weight to copper thickness
 - copper thickness to copper weight
+- engineering input parsing for resistance, capacitance, voltage, current, length, plating thickness, copper weight, and frequency
 
 ### Resistor Calculations
 
@@ -142,6 +163,26 @@ python -m ee_pcb_toolkit
 - number of vias needed for a power net
 - equivalent resistance of multiple vias in parallel
 
+### ADC Calculations
+
+- ADC maximum code
+- ADC LSB size
+- ADC voltage from code
+- ADC code from voltage
+- ADC percent full scale
+- ADC input divider ratio
+- ADC divider resistor calculation
+- sensor voltage to ADC code estimate
+
+### Op-Amp Calculations
+
+- non-inverting amplifier gain
+- inverting amplifier gain
+- amplifier output voltage
+- feedback resistor for target gain
+- closed-loop bandwidth estimate
+- required slew rate estimate
+
 ## Project Structure
 
 ```text
@@ -151,27 +192,37 @@ practical-ee-pcb-toolkit/
 │   ├── __init__.py
 │   ├── __main__.py
 │   ├── cli.py
+│   ├── input_helpers.py
 │   ├── units.py
 │   ├── resistors.py
 │   ├── capacitors.py
 │   ├── pcb_traces.py
 │   ├── power.py
 │   ├── thermal.py
-│   └── vias.py
+│   ├── vias.py
+│   ├── adc.py
+│   └── opamps.py
 │
 ├── examples/
 │   ├── basic_usage.py
-│   └── via_power_net_example.py
+│   ├── via_power_net_example.py
+│   ├── adc_bringup_example.py
+│   └── opamp_front_end_example.py
 │
 ├── docs/
-│   └── via_calculations.md
+│   ├── via_calculations.md
+│   ├── adc_calculations.md
+│   └── opamp_calculations.md
 │
 ├── tests/
 │   ├── test_units.py
 │   ├── test_resistors.py
 │   ├── test_capacitors.py
 │   ├── test_pcb_traces.py
-│   └── test_vias.py
+│   ├── test_vias.py
+│   ├── test_input_helpers.py
+│   ├── test_adc.py
+│   └── test_opamps.py
 │
 ├── pyproject.toml
 ├── requirements.txt
@@ -219,6 +270,18 @@ Run the via power net example:
 python examples/via_power_net_example.py
 ```
 
+Run the ADC bring-up example:
+
+```bash
+python examples/adc_bringup_example.py
+```
+
+Run the op-amp front-end example:
+
+```bash
+python examples/opamp_front_end_example.py
+```
+
 ## Advanced Python Usage
 
 The easiest way to use the toolkit is the interactive calculator:
@@ -237,16 +300,10 @@ from ee_pcb_toolkit.resistors import voltage_divider
 vout = voltage_divider(
     vin=5.0,
     r_top=10000,
-    r_bottom=10000,
+    r_bottom=4700,
 )
 
 print(vout)
-```
-
-Output:
-
-```text
-2.5
 ```
 
 ### PCB Trace Voltage Drop
@@ -259,18 +316,18 @@ from ee_pcb_toolkit.pcb_traces import (
 )
 
 r_trace = trace_resistance(
-    length_mm=100,
-    width_mm=0.25,
-    copper_oz=1.0,
+    length_mm=70,
+    width_mm=0.5588,
+    copper_oz=2.0,
 )
 
 v_drop = trace_voltage_drop(
-    current_a=1.0,
+    current_a=2.0,
     resistance_ohms=r_trace,
 )
 
 p_loss = trace_power_loss(
-    current_a=1.0,
+    current_a=2.0,
     resistance_ohms=r_trace,
 )
 
@@ -309,16 +366,47 @@ print(number_of_vias)
 print(via_array_resistance)
 ```
 
-This asks:
+### ADC Sensor Scaling
 
-```text
-If a 2 A power rail moves between PCB layers, and each via is conservatively limited to 0.5 A, how many vias should be used?
+```python
+from ee_pcb_toolkit.adc import adc_divider_r_top, sensor_voltage_to_adc_code
+
+r_top = adc_divider_r_top(
+    vin_max=10.0,
+    adc_vmax=3.3,
+    r_bottom=10000,
+)
+
+code = sensor_voltage_to_adc_code(
+    sensor_voltage_v=5.0,
+    r_top=r_top,
+    r_bottom=10000,
+    v_ref=3.3,
+    resolution_bits=12,
+)
+
+print(r_top)
+print(code)
 ```
 
-Result:
+### Op-Amp Front-End
 
-```text
-4 vias
+```python
+from ee_pcb_toolkit.opamps import non_inverting_gain, non_inverting_output
+
+gain = non_inverting_gain(
+    r_feedback=56000,
+    r_ground=10000,
+)
+
+vout = non_inverting_output(
+    vin=0.5,
+    r_feedback=56000,
+    r_ground=10000,
+)
+
+print(gain)
+print(vout)
 ```
 
 ## Running Tests
@@ -330,6 +418,8 @@ python -m pytest -v
 ## Documentation
 
 - [Via Calculations](docs/via_calculations.md)
+- [ADC Calculations](docs/adc_calculations.md)
+- [Op-Amp Calculations](docs/opamp_calculations.md)
 
 ## Engineering Notes
 
@@ -346,12 +436,12 @@ For final PCB design decisions, values should be checked against:
 
 For example, via current capacity is not a universal fixed number. It depends on via size, plating thickness, board stackup, copper connection, temperature rise, and manufacturer process limits.
 
+ADC and op-amp calculations in this toolkit are ideal first-pass estimates. Real designs should also account for tolerance, noise, bandwidth, input/output range, loading, stability, and layout.
+
 ## Roadmap
 
 Planned future modules:
 
-- `adc.py` — ADC resolution, code-to-voltage, voltage-to-code, sensor scaling
-- `opamps.py` — gain, offset, bandwidth, and basic amplifier calculations
 - `filters.py` — low-pass, high-pass, and simple active filter helpers
 - `transmission_lines.py` — impedance and signal integrity helper calculations
 - `connectors.py` — pin current derating and connector power checks
