@@ -149,3 +149,14 @@ def get_engineering_value(
         except ValueError as error:
             print(error)
             print("Please try again.")
+
+TIME_TO_SECONDS = {
+    "s": 1.0,
+    "sec": 1.0,
+    "second": 1.0,
+    "seconds": 1.0,
+    "ms": 1e-3,
+    "us": 1e-6,
+    "ns": 1e-9,
+    "ps": 1e-12,
+}

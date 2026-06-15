@@ -42,3 +42,9 @@ def test_parse_frequency_khz():
 def test_invalid_unit_raises_error():
     with pytest.raises(ValueError):
         parse_engineering_value("10 banana", LENGTH_TO_MM, "mm")
+
+from ee_pcb_toolkit.input_helpers import TIME_TO_SECONDS
+
+
+def test_parse_time_ns():
+    assert parse_engineering_value("1 ns", TIME_TO_SECONDS, "s") == pytest.approx(1e-9)

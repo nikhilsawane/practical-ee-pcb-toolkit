@@ -1,4 +1,4 @@
-###################################################################################################################################
+﻿###################################################################################################################################
 # Name: Nikhil Sawane
 # Date: June 15, 2026
 # Project: Practical EE & PCB Toolkit
@@ -51,6 +51,23 @@ from ee_pcb_toolkit.filters import (
     highpass_output_voltage,
     gain_to_db,
 )
+from ee_pcb_toolkit.connectors import (
+    derated_current_per_pin,
+    connector_total_current_capacity,
+    pins_needed_for_current,
+    current_per_pin,
+    connector_voltage_drop,
+    connector_power_loss,
+    is_current_within_connector_rating,
+)
+from ee_pcb_toolkit.signal_integrity import (
+    propagation_delay_ns_per_mm,
+    trace_delay_ns,
+    edge_rate_bandwidth_hz,
+    wavelength_mm,
+    quarter_wavelength_mm,
+    lumped_length_limit_mm,
+)
 from ee_pcb_toolkit.input_helpers import (
     get_engineering_value,
     LENGTH_TO_MM,
@@ -61,6 +78,7 @@ from ee_pcb_toolkit.input_helpers import (
     PLATING_TO_UM,
     COPPER_WEIGHT_TO_OZ,
     FREQUENCY_TO_HZ,
+    TIME_TO_SECONDS,
 )
 
 
@@ -410,6 +428,162 @@ def filter_calculator() -> None:
         print("Invalid filter calculator selection.")
 
 
+
+def connector_calculator() -> None:
+    print("\nConnector Calculator")
+    print("--------------------")
+    print("1. Pins needed for current")
+    print("2. Connector voltage drop and power loss")
+    print("3. Check current against derated rating")
+    print("0. Back to main menu")
+
+    choice = input("\nSelect a connector calculator: ").strip()
+
+    if choice == "1":
+        total_current = get_engineering_value("Total current [example: 6 A]: ", CURRENT_TO_AMPS, "a")
+        rated_current_per_pin = get_engineering_value("Rated current per pin [example: 2 A]: ", CURRENT_TO_AMPS, "a")
+        derating_factor = get_float("Derating factor [example: 0.8]: ")
+
+        allowed_current = derated_current_per_pin(
+            rated_current_per_pin_a=rated_current_per_pin,
+            derating_factor=derating_factor,
+        )
+
+        required_pins = pins_needed_for_current(
+            total_current_a=total_current,
+            rated_current_per_pin_a=rated_current_per_pin,
+            derating_factor=derating_factor,
+        )
+
+        per_pin_current = current_per_pin(
+            total_current_a=total_current,
+            number_of_pins=required_pins,
+        )
+
+        total_capacity = connector_total_current_capacity(
+            number_of_pins=required_pins,
+            rated_current_per_pin_a=rated_current_per_pin,
+            derating_factor=derating_factor,
+        )
+
+        print(f"\nAllowed current per pin: {allowed_current:.4f} A")
+        print(f"Required parallel pins: {required_pins}")
+        print(f"Current per pin with {required_pins} pins: {per_pin_current:.4f} A")
+        print(f"Total derated capacity: {total_capacity:.4f} A")
+
+    elif choice == "2":
+        total_current = get_engineering_value("Total current [example: 6 A]: ", CURRENT_TO_AMPS, "a")
+        contact_resistance = get_float("Contact resistance per pin [mohm, example: 10]: ")
+        number_of_pins = get_int("Number of parallel pins [example: 4]: ")
+
+        voltage_drop = connector_voltage_drop(
+            total_current_a=total_current,
+            contact_resistance_mohm=contact_resistance,
+            number_of_parallel_pins=number_of_pins,
+        )
+
+        power_loss = connector_power_loss(
+            total_current_a=total_current,
+            contact_resistance_mohm=contact_resistance,
+            number_of_parallel_pins=number_of_pins,
+        )
+
+        print(f"\nConnector voltage drop: {voltage_drop:.6f} V")
+        print(f"Connector power loss: {power_loss:.6f} W")
+
+    elif choice == "3":
+        total_current = get_engineering_value("Total current [example: 6 A]: ", CURRENT_TO_AMPS, "a")
+        number_of_pins = get_int("Number of parallel pins [example: 4]: ")
+        rated_current_per_pin = get_engineering_value("Rated current per pin [example: 2 A]: ", CURRENT_TO_AMPS, "a")
+        derating_factor = get_float("Derating factor [example: 0.8]: ")
+
+        total_capacity = connector_total_current_capacity(
+            number_of_pins=number_of_pins,
+            rated_current_per_pin_a=rated_current_per_pin,
+            derating_factor=derating_factor,
+        )
+
+        per_pin_current = current_per_pin(
+            total_current_a=total_current,
+            number_of_pins=number_of_pins,
+        )
+
+        within_rating = is_current_within_connector_rating(
+            total_current_a=total_current,
+            number_of_pins=number_of_pins,
+            rated_current_per_pin_a=rated_current_per_pin,
+            derating_factor=derating_factor,
+        )
+
+        print(f"\nCurrent per pin: {per_pin_current:.4f} A")
+        print(f"Total derated capacity: {total_capacity:.4f} A")
+        print(f"Within derated rating: {within_rating}")
+
+    elif choice == "0":
+        return
+
+    else:
+        print("Invalid connector calculator selection.")
+
+def signal_integrity_calculator() -> None:
+    print("\nSignal Integrity Calculator")
+    print("---------------------------")
+    print("1. Trace delay")
+    print("2. Edge-rate bandwidth")
+    print("3. Wavelength and quarter wavelength")
+    print("4. Lumped-length limit")
+    print("0. Back to main menu")
+
+    choice = input("\nSelect a signal integrity calculator: ").strip()
+
+    if choice == "1":
+        length_mm = get_engineering_value("Trace length [example: 100 mm]: ", LENGTH_TO_MM, "mm")
+        er = get_float("Relative permittivity / Er [example: 4.0]: ")
+
+        delay_per_mm = propagation_delay_ns_per_mm(relative_permittivity=er)
+        delay = trace_delay_ns(length_mm=length_mm, relative_permittivity=er)
+
+        print(f"\nPropagation delay: {delay_per_mm:.6f} ns/mm")
+        print(f"Trace delay: {delay:.6f} ns")
+
+    elif choice == "2":
+        rise_time = get_engineering_value("Rise time [example: 1 ns]: ", TIME_TO_SECONDS, "s")
+
+        bandwidth = edge_rate_bandwidth_hz(rise_time_s=rise_time)
+
+        print(f"\nEstimated edge bandwidth: {bandwidth:.2f} Hz")
+        print(f"Estimated edge bandwidth: {bandwidth / 1e6:.2f} MHz")
+
+    elif choice == "3":
+        frequency = get_engineering_value("Frequency [example: 1 GHz]: ", FREQUENCY_TO_HZ, "hz")
+        er = get_float("Relative permittivity / Er [example: 4.0]: ")
+
+        wavelength = wavelength_mm(frequency_hz=frequency, relative_permittivity=er)
+        quarter = quarter_wavelength_mm(frequency_hz=frequency, relative_permittivity=er)
+
+        print(f"\nWavelength: {wavelength:.4f} mm")
+        print(f"Quarter wavelength: {quarter:.4f} mm")
+
+    elif choice == "4":
+        rise_time = get_engineering_value("Rise time [example: 1 ns]: ", TIME_TO_SECONDS, "s")
+        er = get_float("Relative permittivity / Er [example: 4.0]: ")
+        fraction = get_float("Delay fraction of rise time [example: 0.1]: ")
+
+        limit = lumped_length_limit_mm(
+            rise_time_s=rise_time,
+            relative_permittivity=er,
+            fraction=fraction,
+        )
+
+        print(f"\nLumped-length limit: {limit:.4f} mm")
+        print("If your trace is longer than this, consider transmission-line behavior.")
+
+    elif choice == "0":
+        return
+
+    else:
+        print("Invalid signal integrity calculator selection.")
+
 def print_menu() -> None:
     print("\nPractical EE & PCB Toolkit")
     print("--------------------------")
@@ -421,6 +595,8 @@ def print_menu() -> None:
     print("6. ADC calculations")
     print("7. Op-amp calculations")
     print("8. Filter calculations")
+    print("9. Connector calculations")
+    print("10. Signal integrity calculations")
     print("0. Exit")
 
 
@@ -445,6 +621,10 @@ def main() -> None:
             opamp_calculator()
         elif choice == "8":
             filter_calculator()
+        elif choice == "9":
+            connector_calculator()
+        elif choice == "10":
+            signal_integrity_calculator()
         elif choice == "0":
             print("Exiting Practical EE & PCB Toolkit.")
             break
