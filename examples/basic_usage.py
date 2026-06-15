@@ -3,6 +3,7 @@ from ee_pcb_toolkit.capacitors import rc_cutoff_frequency
 from ee_pcb_toolkit.pcb_traces import trace_resistance, trace_voltage_drop, trace_power_loss
 from ee_pcb_toolkit.power import buck_feedback_r_top
 from ee_pcb_toolkit.thermal import junction_temperature
+from ee_pcb_toolkit.vias import via_barrel_resistance, vias_needed, via_array_equivalent_resistance
 
 
 vout = voltage_divider(vin=5.0, r_top=10000, r_bottom=10000)
@@ -24,3 +25,19 @@ print(f"Buck top feedback resistor: {r_top:.1f} ohms")
 
 tj = junction_temperature(ambient_c=25, power_w=0.8, theta_ja_c_per_w=45)
 print(f"Estimated junction temperature: {tj:.1f} C")
+
+r_via = via_barrel_resistance(
+    board_thickness_mm=1.6,
+    finished_hole_diameter_mm=0.3,
+    plating_thickness_um=25,
+)
+
+num_vias = vias_needed(total_current_a=2.0, current_per_via_a=0.5)
+r_via_array = via_array_equivalent_resistance(
+    single_via_resistance_ohms=r_via,
+    number_of_vias=num_vias,
+)
+
+print(f"Single via resistance: {r_via:.6f} ohms")
+print(f"Recommended via count: {num_vias}")
+print(f"Via array equivalent resistance: {r_via_array:.6f} ohms")
