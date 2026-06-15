@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 
 from ee_pcb_toolkit.input_helpers import (
     parse_engineering_value,
@@ -7,6 +7,7 @@ from ee_pcb_toolkit.input_helpers import (
     CAPACITANCE_TO_FARADS,
     CURRENT_TO_AMPS,
     VOLTAGE_TO_VOLTS,
+    FREQUENCY_TO_HZ,
 )
 
 
@@ -32,6 +33,10 @@ def test_parse_current_ma():
 
 def test_parse_voltage_mv():
     assert parse_engineering_value("3300 mV", VOLTAGE_TO_VOLTS, "v") == pytest.approx(3.3)
+
+
+def test_parse_frequency_khz():
+    assert parse_engineering_value("10 kHz", FREQUENCY_TO_HZ, "hz") == pytest.approx(10000)
 
 
 def test_invalid_unit_raises_error():
