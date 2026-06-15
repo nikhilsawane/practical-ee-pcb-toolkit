@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "practical-ee-pcb-toolkit"
+version = "0.1.0"
+description = "A practical Python toolkit for electrical engineering and PCB design calculations."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Nikhil Sawane" }
+]
+license = "MIT"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
