@@ -1,4 +1,4 @@
-﻿###################################################################################################################################
+###################################################################################################################################
 # Name: Nikhil Sawane
 # Date: June 15, 2026
 # Project: Practical EE & PCB Toolkit
@@ -40,6 +40,16 @@ from ee_pcb_toolkit.opamps import (
     inverting_r_feedback_for_gain,
     closed_loop_bandwidth,
     required_slew_rate_v_per_us,
+)
+from ee_pcb_toolkit.filters import (
+    rc_cutoff_frequency as filter_rc_cutoff_frequency,
+    rc_resistance_for_cutoff,
+    rc_capacitance_for_cutoff,
+    first_order_lowpass_gain,
+    first_order_highpass_gain,
+    lowpass_output_voltage,
+    highpass_output_voltage,
+    gain_to_db,
 )
 from ee_pcb_toolkit.input_helpers import (
     get_engineering_value,
@@ -318,6 +328,88 @@ def opamp_calculator() -> None:
         print("Invalid op-amp calculator selection.")
 
 
+def filter_calculator() -> None:
+    print("\nFilter Calculator")
+    print("-----------------")
+    print("1. RC cutoff from R and C")
+    print("2. R or C for target cutoff")
+    print("3. Low-pass response at frequency")
+    print("4. High-pass response at frequency")
+    print("0. Back to main menu")
+
+    choice = input("\nSelect a filter calculator: ").strip()
+
+    if choice == "1":
+        resistance = get_engineering_value("Resistance [example: 10k]: ", RESISTANCE_TO_OHMS, "ohm")
+        capacitance = get_engineering_value("Capacitance [example: 100 nF]: ", CAPACITANCE_TO_FARADS, "f")
+
+        cutoff = filter_rc_cutoff_frequency(
+            r_ohms=resistance,
+            c_farads=capacitance,
+        )
+
+        print(f"\nCutoff frequency: {cutoff:.4f} Hz")
+
+    elif choice == "2":
+        print("\n1. Calculate resistor from cutoff and capacitor")
+        print("2. Calculate capacitor from cutoff and resistor")
+        solve_choice = input("Select what to calculate: ").strip()
+
+        cutoff = get_engineering_value("Target cutoff frequency [example: 1 kHz]: ", FREQUENCY_TO_HZ, "hz")
+
+        if solve_choice == "1":
+            capacitance = get_engineering_value("Capacitance [example: 100 nF]: ", CAPACITANCE_TO_FARADS, "f")
+            resistance = rc_resistance_for_cutoff(
+                cutoff_hz=cutoff,
+                c_farads=capacitance,
+            )
+            print(f"\nRequired resistor: {resistance:.2f} ohms")
+
+        elif solve_choice == "2":
+            resistance = get_engineering_value("Resistance [example: 10k]: ", RESISTANCE_TO_OHMS, "ohm")
+            capacitance = rc_capacitance_for_cutoff(
+                cutoff_hz=cutoff,
+                r_ohms=resistance,
+            )
+            print(f"\nRequired capacitor: {capacitance:.12f} F")
+            print(f"Required capacitor: {capacitance * 1e9:.4f} nF")
+
+        else:
+            print("Invalid selection.")
+
+    elif choice == "3":
+        vin = get_engineering_value("Input voltage magnitude [example: 1 V]: ", VOLTAGE_TO_VOLTS, "v")
+        frequency = get_engineering_value("Signal frequency [example: 5 kHz]: ", FREQUENCY_TO_HZ, "hz")
+        cutoff = get_engineering_value("Cutoff frequency [example: 1 kHz]: ", FREQUENCY_TO_HZ, "hz")
+
+        gain = first_order_lowpass_gain(frequency_hz=frequency, cutoff_hz=cutoff)
+        vout = lowpass_output_voltage(vin=vin, frequency_hz=frequency, cutoff_hz=cutoff)
+        gain_db = gain_to_db(gain)
+
+        print(f"\nLow-pass gain: {gain:.6f}")
+        print(f"Low-pass gain: {gain_db:.2f} dB")
+        print(f"Output voltage magnitude: {vout:.6f} V")
+
+    elif choice == "4":
+        vin = get_engineering_value("Input voltage magnitude [example: 1 V]: ", VOLTAGE_TO_VOLTS, "v")
+        frequency = get_engineering_value("Signal frequency [example: 100 Hz]: ", FREQUENCY_TO_HZ, "hz")
+        cutoff = get_engineering_value("Cutoff frequency [example: 1 kHz]: ", FREQUENCY_TO_HZ, "hz")
+
+        gain = first_order_highpass_gain(frequency_hz=frequency, cutoff_hz=cutoff)
+        vout = highpass_output_voltage(vin=vin, frequency_hz=frequency, cutoff_hz=cutoff)
+        gain_db = gain_to_db(gain)
+
+        print(f"\nHigh-pass gain: {gain:.6f}")
+        print(f"High-pass gain: {gain_db:.2f} dB")
+        print(f"Output voltage magnitude: {vout:.6f} V")
+
+    elif choice == "0":
+        return
+
+    else:
+        print("Invalid filter calculator selection.")
+
+
 def print_menu() -> None:
     print("\nPractical EE & PCB Toolkit")
     print("--------------------------")
@@ -328,6 +420,7 @@ def print_menu() -> None:
     print("5. Via planning for power net")
     print("6. ADC calculations")
     print("7. Op-amp calculations")
+    print("8. Filter calculations")
     print("0. Exit")
 
 
@@ -350,6 +443,8 @@ def main() -> None:
             adc_calculator()
         elif choice == "7":
             opamp_calculator()
+        elif choice == "8":
+            filter_calculator()
         elif choice == "0":
             print("Exiting Practical EE & PCB Toolkit.")
             break
