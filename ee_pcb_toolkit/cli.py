@@ -74,6 +74,12 @@ from ee_pcb_toolkit.pcb_rules import (
     via_rule_summary,
     get_diff_pair_rule,
 )
+from ee_pcb_toolkit.standard_values import (
+    nearest_standard_value,
+    bracket_standard_values,
+    format_ohms,
+    format_farads,
+)
 from ee_pcb_toolkit.input_helpers import (
     get_engineering_value,
     LENGTH_TO_MM,
@@ -685,6 +691,84 @@ def pcb_rules_calculator() -> None:
     else:
         print("Invalid PCB rule calculator selection.")
 
+
+def standard_values_calculator() -> None:
+    print("\nStandard Value Selector")
+    print("-----------------------")
+    print("1. Nearest resistor value")
+    print("2. Nearest capacitor value")
+    print("3. Lower / nearest / higher resistor values")
+    print("4. Lower / nearest / higher capacitor values")
+    print("0. Back to main menu")
+
+    choice = input("\nSelect a standard-value calculator: ").strip()
+
+    if choice == "1":
+        target = get_engineering_value("Target resistance [example: 31.25k]: ", RESISTANCE_TO_OHMS, "ohm")
+        series = input("E-series [example: E24, E96]: ").strip()
+
+        result = nearest_standard_value(
+            target_value=target,
+            series=series,
+        )
+
+        print(f"\nTarget: {format_ohms(result['target_value'])}")
+        print(f"Series: {result['series']}")
+        print(f"Nearest: {format_ohms(result['nearest_value'])}")
+        print(f"Error: {result['error_percent']:.2f}%")
+
+    elif choice == "2":
+        target = get_engineering_value("Target capacitance [example: 15.9 nF]: ", CAPACITANCE_TO_FARADS, "f")
+        series = input("E-series [example: E12, E24]: ").strip()
+
+        result = nearest_standard_value(
+            target_value=target,
+            series=series,
+        )
+
+        print(f"\nTarget: {format_farads(result['target_value'])}")
+        print(f"Series: {result['series']}")
+        print(f"Nearest: {format_farads(result['nearest_value'])}")
+        print(f"Error: {result['error_percent']:.2f}%")
+
+    elif choice == "3":
+        target = get_engineering_value("Target resistance [example: 31.25k]: ", RESISTANCE_TO_OHMS, "ohm")
+        series = input("E-series [example: E24, E96]: ").strip()
+
+        result = bracket_standard_values(
+            target_value=target,
+            series=series,
+        )
+
+        print(f"\nTarget: {format_ohms(result['target_value'])}")
+        print(f"Series: {result['series']}")
+        print(f"Lower: {format_ohms(result['lower_value'])}")
+        print(f"Nearest: {format_ohms(result['nearest_value'])}")
+        print(f"Higher: {format_ohms(result['higher_value'])}")
+        print(f"Nearest error: {result['nearest_error_percent']:.2f}%")
+
+    elif choice == "4":
+        target = get_engineering_value("Target capacitance [example: 15.9 nF]: ", CAPACITANCE_TO_FARADS, "f")
+        series = input("E-series [example: E12, E24]: ").strip()
+
+        result = bracket_standard_values(
+            target_value=target,
+            series=series,
+        )
+
+        print(f"\nTarget: {format_farads(result['target_value'])}")
+        print(f"Series: {result['series']}")
+        print(f"Lower: {format_farads(result['lower_value'])}")
+        print(f"Nearest: {format_farads(result['nearest_value'])}")
+        print(f"Higher: {format_farads(result['higher_value'])}")
+        print(f"Nearest error: {result['nearest_error_percent']:.2f}%")
+
+    elif choice == "0":
+        return
+
+    else:
+        print("Invalid standard-value calculator selection.")
+
 def print_menu() -> None:
     print("\nPractical EE & PCB Toolkit")
     print("--------------------------")
@@ -699,6 +783,7 @@ def print_menu() -> None:
     print("9. Connector calculations")
     print("10. Signal integrity calculations")
     print("11. PCB rule assistant")
+    print("12. Standard value selector")
     print("0. Exit")
 
 
@@ -729,6 +814,8 @@ def main() -> None:
             signal_integrity_calculator()
         elif choice == "11":
             pcb_rules_calculator()
+        elif choice == "12":
+            standard_values_calculator()
         elif choice == "0":
             print("Exiting Practical EE & PCB Toolkit.")
             break
@@ -738,4 +825,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
