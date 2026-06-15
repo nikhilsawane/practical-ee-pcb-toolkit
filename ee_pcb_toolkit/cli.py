@@ -31,6 +31,16 @@ from ee_pcb_toolkit.adc import (
     adc_divider_r_top,
     adc_divider_output,
 )
+from ee_pcb_toolkit.opamps import (
+    non_inverting_gain,
+    inverting_gain,
+    non_inverting_output,
+    inverting_output,
+    non_inverting_r_feedback_for_gain,
+    inverting_r_feedback_for_gain,
+    closed_loop_bandwidth,
+    required_slew_rate_v_per_us,
+)
 from ee_pcb_toolkit.input_helpers import (
     get_engineering_value,
     LENGTH_TO_MM,
@@ -40,6 +50,7 @@ from ee_pcb_toolkit.input_helpers import (
     VOLTAGE_TO_VOLTS,
     PLATING_TO_UM,
     COPPER_WEIGHT_TO_OZ,
+    FREQUENCY_TO_HZ,
 )
 
 
@@ -50,6 +61,15 @@ def get_int(prompt: str) -> int:
             return int(input(prompt))
         except ValueError:
             print("Please enter a valid integer.")
+
+
+def get_float(prompt: str) -> float:
+    """Get a floating-point number from the user."""
+    while True:
+        try:
+            return float(input(prompt))
+        except ValueError:
+            print("Please enter a valid number.")
 
 
 def voltage_divider_calculator() -> None:
@@ -185,16 +205,8 @@ def adc_calculator() -> None:
         resolution_bits = get_int("ADC resolution [bits, example: 12]: ")
         code = get_int("ADC code [example: 2048]: ")
 
-        voltage = adc_voltage_from_code(
-            code=code,
-            v_ref=v_ref,
-            resolution_bits=resolution_bits,
-        )
-
-        lsb = adc_lsb_size(
-            v_ref=v_ref,
-            resolution_bits=resolution_bits,
-        )
+        voltage = adc_voltage_from_code(code=code, v_ref=v_ref, resolution_bits=resolution_bits)
+        lsb = adc_lsb_size(v_ref=v_ref, resolution_bits=resolution_bits)
 
         print(f"\nADC LSB size: {lsb:.6f} V/count")
         print(f"ADC input voltage estimate: {voltage:.6f} V")
@@ -204,16 +216,8 @@ def adc_calculator() -> None:
         v_ref = get_engineering_value("ADC reference voltage [example: 3.3 V]: ", VOLTAGE_TO_VOLTS, "v")
         resolution_bits = get_int("ADC resolution [bits, example: 12]: ")
 
-        code = adc_code_from_voltage(
-            voltage_v=voltage,
-            v_ref=v_ref,
-            resolution_bits=resolution_bits,
-        )
-
-        lsb = adc_lsb_size(
-            v_ref=v_ref,
-            resolution_bits=resolution_bits,
-        )
+        code = adc_code_from_voltage(voltage_v=voltage, v_ref=v_ref, resolution_bits=resolution_bits)
+        lsb = adc_lsb_size(v_ref=v_ref, resolution_bits=resolution_bits)
 
         print(f"\nADC LSB size: {lsb:.6f} V/count")
         print(f"Expected ADC code: {code}")
@@ -223,17 +227,8 @@ def adc_calculator() -> None:
         adc_vmax = get_engineering_value("Maximum ADC input voltage [example: 3.3 V]: ", VOLTAGE_TO_VOLTS, "v")
         r_bottom = get_engineering_value("Bottom resistor [example: 10k]: ", RESISTANCE_TO_OHMS, "ohm")
 
-        r_top = adc_divider_r_top(
-            vin_max=vin_max,
-            adc_vmax=adc_vmax,
-            r_bottom=r_bottom,
-        )
-
-        actual_adc_vmax = adc_divider_output(
-            vin=vin_max,
-            r_top=r_top,
-            r_bottom=r_bottom,
-        )
+        r_top = adc_divider_r_top(vin_max=vin_max, adc_vmax=adc_vmax, r_bottom=r_bottom)
+        actual_adc_vmax = adc_divider_output(vin=vin_max, r_top=r_top, r_bottom=r_bottom)
 
         print(f"\nTop resistor: {r_top:.2f} ohms")
         print(f"Bottom resistor: {r_bottom:.2f} ohms")
@@ -246,6 +241,83 @@ def adc_calculator() -> None:
         print("Invalid ADC calculator selection.")
 
 
+def opamp_calculator() -> None:
+    print("\nOp-Amp Calculator")
+    print("-----------------")
+    print("1. Non-inverting amplifier output")
+    print("2. Inverting amplifier output")
+    print("3. Feedback resistor for target gain")
+    print("4. Closed-loop bandwidth estimate")
+    print("5. Required slew rate")
+    print("0. Back to main menu")
+
+    choice = input("\nSelect an op-amp calculator: ").strip()
+
+    if choice == "1":
+        vin = get_engineering_value("Input voltage [example: 0.5 V]: ", VOLTAGE_TO_VOLTS, "v")
+        r_feedback = get_engineering_value("Feedback resistor Rf [example: 56k]: ", RESISTANCE_TO_OHMS, "ohm")
+        r_ground = get_engineering_value("Ground resistor Rg [example: 10k]: ", RESISTANCE_TO_OHMS, "ohm")
+
+        gain = non_inverting_gain(r_feedback=r_feedback, r_ground=r_ground)
+        vout = non_inverting_output(vin=vin, r_feedback=r_feedback, r_ground=r_ground)
+
+        print(f"\nNon-inverting gain: {gain:.4f}")
+        print(f"Output voltage: {vout:.4f} V")
+
+    elif choice == "2":
+        vin = get_engineering_value("Input voltage [example: 0.5 V]: ", VOLTAGE_TO_VOLTS, "v")
+        r_feedback = get_engineering_value("Feedback resistor Rf [example: 20k]: ", RESISTANCE_TO_OHMS, "ohm")
+        r_input = get_engineering_value("Input resistor Rin [example: 10k]: ", RESISTANCE_TO_OHMS, "ohm")
+
+        gain = inverting_gain(r_feedback=r_feedback, r_input=r_input)
+        vout = inverting_output(vin=vin, r_feedback=r_feedback, r_input=r_input)
+
+        print(f"\nInverting gain magnitude: {gain:.4f}")
+        print(f"Output voltage: {vout:.4f} V")
+
+    elif choice == "3":
+        print("\n1. Non-inverting amplifier")
+        print("2. Inverting amplifier")
+        amp_type = input("Select amplifier type: ").strip()
+
+        target_gain = get_float("Target gain [example: 3]: ")
+
+        if amp_type == "1":
+            r_ground = get_engineering_value("Ground resistor Rg [example: 10k]: ", RESISTANCE_TO_OHMS, "ohm")
+            r_feedback = non_inverting_r_feedback_for_gain(target_gain=target_gain, r_ground=r_ground)
+            print(f"\nRequired feedback resistor Rf: {r_feedback:.2f} ohms")
+
+        elif amp_type == "2":
+            r_input = get_engineering_value("Input resistor Rin [example: 10k]: ", RESISTANCE_TO_OHMS, "ohm")
+            r_feedback = inverting_r_feedback_for_gain(target_gain=target_gain, r_input=r_input)
+            print(f"\nRequired feedback resistor Rf: {r_feedback:.2f} ohms")
+
+        else:
+            print("Invalid amplifier type.")
+
+    elif choice == "4":
+        gbw = get_engineering_value("Op-amp gain-bandwidth product [example: 1 MHz]: ", FREQUENCY_TO_HZ, "hz")
+        gain = get_float("Closed-loop gain [example: 10]: ")
+
+        bandwidth = closed_loop_bandwidth(gain_bandwidth_hz=gbw, closed_loop_gain=gain)
+
+        print(f"\nEstimated closed-loop bandwidth: {bandwidth:.2f} Hz")
+
+    elif choice == "5":
+        v_peak = get_engineering_value("Output peak voltage [example: 1 V]: ", VOLTAGE_TO_VOLTS, "v")
+        frequency = get_engineering_value("Signal frequency [example: 100 kHz]: ", FREQUENCY_TO_HZ, "hz")
+
+        slew_rate = required_slew_rate_v_per_us(v_peak=v_peak, frequency_hz=frequency)
+
+        print(f"\nRequired slew rate: {slew_rate:.6f} V/us")
+
+    elif choice == "0":
+        return
+
+    else:
+        print("Invalid op-amp calculator selection.")
+
+
 def print_menu() -> None:
     print("\nPractical EE & PCB Toolkit")
     print("--------------------------")
@@ -255,6 +327,7 @@ def print_menu() -> None:
     print("4. LDO power dissipation")
     print("5. Via planning for power net")
     print("6. ADC calculations")
+    print("7. Op-amp calculations")
     print("0. Exit")
 
 
@@ -275,6 +348,8 @@ def main() -> None:
             via_planning_calculator()
         elif choice == "6":
             adc_calculator()
+        elif choice == "7":
+            opamp_calculator()
         elif choice == "0":
             print("Exiting Practical EE & PCB Toolkit.")
             break

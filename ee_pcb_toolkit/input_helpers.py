@@ -141,3 +141,15 @@ def get_engineering_value(
         except ValueError as error:
             print(error)
             print("Please try again.")
+
+FREQUENCY_TO_HZ = {
+    "hz": 1.0,
+    "khz": 1_000.0,
+    "mhz": 1_000_000.0,
+}
+
+FREQUENCY_TO_HZ = {
+    "hz": 1.0,
+    "khz": 1_000.0,
+    "mhz": 1_000_000.0,
+}
