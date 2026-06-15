@@ -24,6 +24,13 @@ from ee_pcb_toolkit.vias import (
     via_voltage_drop,
     via_power_loss,
 )
+from ee_pcb_toolkit.adc import (
+    adc_lsb_size,
+    adc_voltage_from_code,
+    adc_code_from_voltage,
+    adc_divider_r_top,
+    adc_divider_output,
+)
 from ee_pcb_toolkit.input_helpers import (
     get_engineering_value,
     LENGTH_TO_MM,
@@ -34,6 +41,15 @@ from ee_pcb_toolkit.input_helpers import (
     PLATING_TO_UM,
     COPPER_WEIGHT_TO_OZ,
 )
+
+
+def get_int(prompt: str) -> int:
+    """Get an integer from the user."""
+    while True:
+        try:
+            return int(input(prompt))
+        except ValueError:
+            print("Please enter a valid integer.")
 
 
 def voltage_divider_calculator() -> None:
@@ -154,6 +170,82 @@ def via_planning_calculator() -> None:
     print(f"Power loss in via array: {power_loss:.6f} W")
 
 
+def adc_calculator() -> None:
+    print("\nADC Calculator")
+    print("--------------")
+    print("1. ADC voltage from code")
+    print("2. ADC code from voltage")
+    print("3. ADC divider for sensor input")
+    print("0. Back to main menu")
+
+    choice = input("\nSelect an ADC calculator: ").strip()
+
+    if choice == "1":
+        v_ref = get_engineering_value("ADC reference voltage [example: 3.3 V]: ", VOLTAGE_TO_VOLTS, "v")
+        resolution_bits = get_int("ADC resolution [bits, example: 12]: ")
+        code = get_int("ADC code [example: 2048]: ")
+
+        voltage = adc_voltage_from_code(
+            code=code,
+            v_ref=v_ref,
+            resolution_bits=resolution_bits,
+        )
+
+        lsb = adc_lsb_size(
+            v_ref=v_ref,
+            resolution_bits=resolution_bits,
+        )
+
+        print(f"\nADC LSB size: {lsb:.6f} V/count")
+        print(f"ADC input voltage estimate: {voltage:.6f} V")
+
+    elif choice == "2":
+        voltage = get_engineering_value("ADC input voltage [example: 1.65 V]: ", VOLTAGE_TO_VOLTS, "v")
+        v_ref = get_engineering_value("ADC reference voltage [example: 3.3 V]: ", VOLTAGE_TO_VOLTS, "v")
+        resolution_bits = get_int("ADC resolution [bits, example: 12]: ")
+
+        code = adc_code_from_voltage(
+            voltage_v=voltage,
+            v_ref=v_ref,
+            resolution_bits=resolution_bits,
+        )
+
+        lsb = adc_lsb_size(
+            v_ref=v_ref,
+            resolution_bits=resolution_bits,
+        )
+
+        print(f"\nADC LSB size: {lsb:.6f} V/count")
+        print(f"Expected ADC code: {code}")
+
+    elif choice == "3":
+        vin_max = get_engineering_value("Maximum sensor/input voltage [example: 10 V]: ", VOLTAGE_TO_VOLTS, "v")
+        adc_vmax = get_engineering_value("Maximum ADC input voltage [example: 3.3 V]: ", VOLTAGE_TO_VOLTS, "v")
+        r_bottom = get_engineering_value("Bottom resistor [example: 10k]: ", RESISTANCE_TO_OHMS, "ohm")
+
+        r_top = adc_divider_r_top(
+            vin_max=vin_max,
+            adc_vmax=adc_vmax,
+            r_bottom=r_bottom,
+        )
+
+        actual_adc_vmax = adc_divider_output(
+            vin=vin_max,
+            r_top=r_top,
+            r_bottom=r_bottom,
+        )
+
+        print(f"\nTop resistor: {r_top:.2f} ohms")
+        print(f"Bottom resistor: {r_bottom:.2f} ohms")
+        print(f"ADC voltage at maximum input: {actual_adc_vmax:.4f} V")
+
+    elif choice == "0":
+        return
+
+    else:
+        print("Invalid ADC calculator selection.")
+
+
 def print_menu() -> None:
     print("\nPractical EE & PCB Toolkit")
     print("--------------------------")
@@ -162,6 +254,7 @@ def print_menu() -> None:
     print("3. PCB trace voltage drop")
     print("4. LDO power dissipation")
     print("5. Via planning for power net")
+    print("6. ADC calculations")
     print("0. Exit")
 
 
@@ -180,6 +273,8 @@ def main() -> None:
             ldo_calculator()
         elif choice == "5":
             via_planning_calculator()
+        elif choice == "6":
+            adc_calculator()
         elif choice == "0":
             print("Exiting Practical EE & PCB Toolkit.")
             break
