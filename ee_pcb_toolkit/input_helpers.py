@@ -1,4 +1,4 @@
-﻿###################################################################################################################################
+###################################################################################################################################
 # Name: Nikhil Sawane
 # Date: June 15, 2026
 # Project: Practical EE & PCB Toolkit
@@ -16,6 +16,7 @@ These helpers allow engineering-friendly inputs such as:
 - 100 nF
 - 10 uF
 - 500 mA
+- 1 MHz
 """
 
 import re
@@ -67,6 +68,12 @@ VOLTAGE_TO_VOLTS = {
     "mv": 1e-3,
 }
 
+FREQUENCY_TO_HZ = {
+    "hz": 1.0,
+    "khz": 1_000.0,
+    "mhz": 1_000_000.0,
+}
+
 PLATING_TO_UM = {
     "um": 1.0,
     "micron": 1.0,
@@ -101,6 +108,7 @@ def parse_engineering_value(user_input: str, unit_table: dict[str, float], defau
         parse_engineering_value("22 mil", LENGTH_TO_MM, "mm")
         parse_engineering_value("10k", RESISTANCE_TO_OHMS, "ohm")
         parse_engineering_value("100 nF", CAPACITANCE_TO_FARADS, "f")
+        parse_engineering_value("1 MHz", FREQUENCY_TO_HZ, "hz")
     """
     text = user_input.strip()
 
@@ -141,15 +149,3 @@ def get_engineering_value(
         except ValueError as error:
             print(error)
             print("Please try again.")
-
-FREQUENCY_TO_HZ = {
-    "hz": 1.0,
-    "khz": 1_000.0,
-    "mhz": 1_000_000.0,
-}
-
-FREQUENCY_TO_HZ = {
-    "hz": 1.0,
-    "khz": 1_000.0,
-    "mhz": 1_000_000.0,
-}
